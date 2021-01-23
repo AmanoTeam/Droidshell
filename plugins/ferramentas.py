@@ -1,5 +1,6 @@
 from settings import bot,version,db,isAdmin,bot_username
-import re, time
+import re, time, requests, json
+from datetime import date
 
 async def ferramentas(msg):
     if msg.get('text'):
@@ -39,5 +40,36 @@ Desenvolvedores:
             second = time.time()
             await bot.editMessageText((msg['chat']['id'], sent['message_id']), '*Pong!* `{}`s'.format(str(second - first)[:5]), 'Markdown')
             return True
+        elif msg['text'] == '/cotacao':
+            url = "https://api.hgbrasil.com/finance?formt=json"
+
+            payload={}
+            headers = {}
+
+            response = requests.request("GET", url, headers=headers, data=payload)
+            result = json.loads(response.text)
+            dolar = float(result["results"]["currencies"]["USD"]["buy"])
+            euro = float(result["results"]["currencies"]["EUR"]["buy"])
+            dolarf = truncate(dolar, 2)
+            eurof = truncate(euro, 2)
+            
+            data_atual = date.today()
+            data_em_texto = data_atual.strftime('%d/%m/%Y')
+            
+            await bot.sendMessage(msg['chat']['id'], '''
+<b>Cotação Atualizada {}</b>
+<b> 💵 Dolar: </b> <i>{}</i>
+<b> 💶 Euro: </b> <i>{}</i>
+            '''.format(data_em_texto,dolarf, eurof),parse_mode='HTML',
+                                         reply_to_message_id=msg['message_id'])
+
+
+def truncate(f, n):
+    '''Truncates/pads a float f to n decimal places without rounding'''
+    s = '{}'.format(f)
+    if 'e' in s or 'E' in s:
+        return '{0:.{1}f}'.format(f, n)
+    i, p, d = s.partition('.')
+    return '.'.join([i, (d+'0'*n)[:n]])
 
 
